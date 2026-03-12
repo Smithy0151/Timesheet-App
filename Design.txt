@@ -1,0 +1,327 @@
+import React from "react";
+
+// Canvas-preview friendly (no shadcn, no TS). Tailwind only.
+
+// ----- Config
+const SIZE_SPAN = { S: 1, M: 2, L: 3, XL: 4 };
+const SIZE_DAYS = { S: 5, M: 20, L: 60, XL: 100 };
+// Emerald ramp by size (lighter→darker)
+const SIZE_COLOR = {
+  // Corporate green ramp (same colour per size)
+  S: "bg-emerald-300",
+  M: "bg-emerald-400",
+  L: "bg-emerald-500",
+  XL: "bg-emerald-700",
+};
+// Light blue ramp for WiggleDesk items
+const SIZE_COLOR_BLUE = {
+  S: "bg-sky-300",
+  M: "bg-sky-400",
+  L: "bg-sky-500",
+  XL: "bg-sky-700",
+};
+// Hex fallback so blue pills are always visible even if Tailwind purges sky-* classes
+const SIZE_HEX_BLUE = {
+  S: "#7dd3fc",  // sky-300
+  M: "#38bdf8",  // sky-400
+  L: "#0ea5e9",  // sky-500
+  XL: "#0369a1", // sky-700
+};
+// WiggleDesk item-specific blue palette (ensures each pill is a different shade)
+const WIGGLE_BLUE = [
+  "#bae6fd", // sky-200
+  "#7dd3fc", // sky-300
+  "#38bdf8", // sky-400
+  "#0ea5e9", // sky-500
+];
+const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const GRID_WIDTH = 2600; // px
+const QUARTER_CAPACITY = 75; // days per quarter before FTE (300d/yr total capacity)
+const BANDS = {
+  Now: { start: 1, end: 3, label: "Now (Q1)" },
+  Next: { start: 4, end: 6, label: "Next (Q2)" },
+  Future: { start: 7, end: 9, label: "Future (Q3)" },
+};
+
+// Investment case → icon (Column B in your sheet)
+// Investment case → white glyph mark (Column B in your sheet)
+const CASE_MARK = {
+  "Revenue Generation": "£",
+  "Security": "S",
+  "Customer Delight": "★",
+  "Customer Retention": "R",
+  "Cost Reduction": "↘",
+  "New Market Penetration": "N",
+  "IoT / Smart Buildings Enablement": "I",
+};
+
+// Core work items
+const DATA = [
+  // WiggleDesk (blue-themed) only
+  { name: "Paid Bookings", phase: "Now", size: "L", case: "Cost Reduction", theme: "blue", colorIdx: 0 },
+  { name: "Concerto Integration", phase: "Now", size: "M", case: "IoT / Smart Buildings Enablement", theme: "blue", colorIdx: 1 },
+  { name: "AI Book Space", phase: "Next", size: "L", case: "Revenue Generation", theme: "blue", colorIdx: 2 },
+  { name: "AI Recommend Space", phase: "Next", size: "M", case: "New Market Penetration", theme: "blue", colorIdx: 3 },
+];
+
+// FTE lines (rendered in a dedicated band across all 12 months)
+const FTE_LINES = [
+  { name: "Support & Accessibility (0.25× FTE)", ftes: 0.25 },
+];
+const DAYS_PER_YEAR = 240;
+const DAYS_PER_QUARTER = DAYS_PER_YEAR / 4; // 60d per quarter per 1 FTE
+const FTE_PER_QUARTER_DAYS = FTE_LINES.reduce((sum, l) => sum + l.ftes * DAYS_PER_QUARTER, 0); // e.g., 0.25 FTE -> 13.75/qtr // Now 3 FTE = 180/qtr // 1 FTE = 240/yr = 60/qtr
+const FTE_COLORS = [
+  "bg-teal-700",   // FTE line 1
+  "bg-amber-500",  // FTE line 2
+  "bg-cyan-600",   // FTE line 3
+]; // pleasant contrast set
+
+function layoutBand(phase, items) {
+  const { start, end } = BANDS[phase];
+  const placed = [];
+  let cursor = start;
+  items.forEach((it) => {
+    const fullSpan = SIZE_SPAN[it.size] || 1;
+    if (cursor + fullSpan - 1 > end) cursor = start; // wrap inside band
+    placed.push({ ...it, startCol: cursor, span: Math.min(fullSpan, end - cursor + 1) });
+    cursor += fullSpan;
+  });
+  return placed;
+}
+
+function statusText(days, netCap) {
+  return days > netCap
+    ? `Over by ${days - netCap} days`
+    : `Under by ${netCap - days} days`;
+}
+function statusClass(days, netCap) {
+  return days > netCap ? "text-red-600" : "text-emerald-700";
+}
+
+export default function RoadmapGantt() {
+  const byPhase = { Now: [], Next: [], Future: [] };
+  DATA.forEach((d) => byPhase[d.phase] && byPhase[d.phase].push(d));
+
+  const bands = Object.keys(BANDS).map((p) => ({ phase: p, items: layoutBand(p, byPhase[p] || []) }));
+  const totals = {
+    Now: (byPhase.Now || []).reduce((a, b) => a + (SIZE_DAYS[b.size] || 0), 0),
+    Next: (byPhase.Next || []).reduce((a, b) => a + (SIZE_DAYS[b.size] || 0), 0),
+    Future: (byPhase.Future || []).reduce((a, b) => a + (SIZE_DAYS[b.size] || 0), 0),
+  };
+  const netCap = QUARTER_CAPACITY - FTE_PER_QUARTER_DAYS; // apply FTE consumption evenly per quarter
+
+  // --- Lightweight self-tests (console-only) to prevent regressions ---
+  try {
+    // Updated self-test expectations for WiggleDesk-only view
+    const expected = { Now: 80, Next: 80, Future: 0 };
+    console.assert(totals.Now === expected.Now, `Q1 total mismatch: ${totals.Now} != ${expected.Now}`);
+    console.assert(totals.Next === expected.Next, `Q2 total mismatch: ${totals.Next} != ${expected.Next}`);
+    console.assert(totals.Future === expected.Future, `Q3 total mismatch: ${totals.Future} != ${expected.Future}`);
+    console.assert(FTE_PER_QUARTER_DAYS === 15, `FTE per quarter mismatch: ${FTE_PER_QUARTER_DAYS} != 15`);
+    console.assert(netCap === 60, `Net capacity mismatch: ${netCap} != 60`);
+  } catch (e) {
+    console.warn("Self-tests skipped:", e);
+  }
+
+  return (
+    <div className="w-full bg-white text-slate-900 p-6">
+      {/* Global title above the month pills */}
+      <div className="mb-4 flex items-center gap-4">
+        <div className="w-32 shrink-0" />
+        <div
+          className="text-7xl font-extrabold text-center"
+          style={{ width: GRID_WIDTH, minWidth: GRID_WIDTH, color: '#7dd3fc', fontFamily: 'Arial, Helvetica, sans-serif' }}
+        >
+          2026 WiggleDesk Roadmap
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 shadow-sm overflow-x-auto bg-white">
+        {/* Month header (evenly spaced, wide) */}
+        <div className="pb-2">
+          <div className="flex items-center gap-4">
+            <div className="w-32 shrink-0" />
+            <div className="relative grid grid-cols-12 gap-x-1" style={{ width: GRID_WIDTH, minWidth: GRID_WIDTH }}>
+              {/* Vertical quarter separators */}
+              <div className="absolute left-[25%] top-0 bottom-0 w-px bg-black/70" />
+              <div className="absolute left-[50%] top-0 bottom-0 w-px bg-black/70" />
+              <div className="absolute left-[75%] top-0 bottom-0 w-px bg-black/70" />
+              {MONTHS.map((m) => (
+                <div key={m} className="flex items-center justify-center">
+                  <div className="rounded-2xl bg-slate-900 text-white px-6 py-2 w-full text-center">
+                    <div className="text-base font-semibold leading-tight">{m}</div>
+                    <div className="text-[11px] font-medium opacity-85 leading-tight">{MONTH_LABELS[m-1]}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Phase labels under month pills (bigger font) */}
+          <div className="mt-2 flex items-center gap-4">
+            <div className="w-32 shrink-0" />
+            <div className="relative grid grid-cols-12 gap-x-1" style={{ width: GRID_WIDTH, minWidth: GRID_WIDTH }}>
+              <div style={{ gridColumn: "1 / span 3" }} className="text-center text-2xl font-semibold text-black">NOW</div>
+              <div style={{ gridColumn: "4 / span 3" }} className="text-center text-2xl font-semibold text-black">NEXT</div>
+              <div style={{ gridColumn: "7 / span 3" }} className="text-center text-2xl font-semibold text-black">FUTURE</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Horizontal separators between quarter bands */}
+        <div className="flex items-center gap-4">
+          <div className="w-32 shrink-0" />
+          <div className="h-px bg-black/70" style={{ width: GRID_WIDTH }} />
+        </div>
+
+        {/* Aligned rows: top pill of each quarter on same Y, then 2nd, 3rd, ... */}
+        <div className="pt-2 space-y-4">
+          {/* Build aligned rows from sequential items per phase */}
+          {(() => {
+            const placedNow = layoutBand('Now', byPhase.Now || []);
+            const placedNext = layoutBand('Next', byPhase.Next || []);
+            const placedFuture = layoutBand('Future', byPhase.Future || []);
+            const maxRows = Math.max(placedNow.length, placedNext.length, placedFuture.length);
+
+            const rows = [];
+            for (let r = 0; r < maxRows; r++) {
+              const rowItems = [
+                placedNow[r],
+                placedNext[r],
+                placedFuture[r],
+              ].filter(Boolean);
+
+              rows.push(
+                <div key={`row-${r}`} className="flex flex-col gap-1">
+                  <div className="flex items-start gap-4">
+                    {/* Single swimlane label shown only for first row to save space */}
+                    <div className="w-32 shrink-0" />
+                    {/* One 12-col grid per row, so items index-align across quarters */}
+                    <div className="relative grid grid-cols-12 gap-x-1" style={{ width: GRID_WIDTH, minWidth: GRID_WIDTH }}>
+                      {/* Vertical quarter separators (subtle) */}
+                      <div className="absolute left-[25%] top-0 bottom-0 w-px bg-black/60" />
+                      <div className="absolute left-[50%] top-0 bottom-0 w-px bg-black/60" />
+                      <div className="absolute left-[75%] top-0 bottom-0 w-px bg-black/60" />
+
+                      {rowItems.map((it, idx2) => (
+                        <div
+                          key={`row-${r}-${idx2}-${it.name}`}
+                          style={{ gridColumn: `${it.startCol} / span ${it.span}` }}
+                          className="min-w-0 px-1 py-1"
+                        >
+                          <div
+                            className={`relative rounded-2xl ${it.theme === 'blue' ? '' : SIZE_COLOR[it.size]} text-white text-base font-medium px-6 py-3 shadow-sm`}
+                            style={it.theme === 'blue' ? { backgroundColor: (typeof it.colorIdx === 'number' ? WIGGLE_BLUE[it.colorIdx % WIGGLE_BLUE.length] : (SIZE_HEX_BLUE[it.size] || '#0ea5e9')) } : {}}
+                          >
+                            <div className="truncate pr-8">{it.name}</div>
+                            <div className="text-sm opacity-90">{`${it.size} - ${SIZE_DAYS[it.size]} days`}</div>
+                            {it.case && (
+                              <span
+                                title={it.case}
+                                aria-label={it.case}
+                                className="absolute top-1.5 right-1.5 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white text-base leading-none select-none shadow-sm"
+                              >
+                                {CASE_MARK[it.case] ?? "•"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Divider between rows */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-32 shrink-0" />
+                    <div className="h-px bg-black/10" style={{ width: GRID_WIDTH }} />
+                  </div>
+                </div>
+              );
+            }
+            return rows;
+          })()}
+
+          {/* Totals line: Q1/Q2/Q3 on same line (unchanged) */}
+          <div className="flex items-start gap-4">
+            <div className="w-32 shrink-0" />
+            <div className="relative grid grid-cols-12 gap-x-1" style={{ width: GRID_WIDTH, minWidth: GRID_WIDTH }}>
+              <div style={{ gridColumn: '1 / span 3' }} className="text-center">
+                <div className="text-lg font-bold">Q1 Total: {totals.Now} days</div>
+                <div className="text-sm text-slate-600">Available: {netCap} days • Used: {totals.Now} days</div>
+                <div className={`text-base font-semibold ${statusClass(totals.Now, netCap)}`}>{statusText(totals.Now, netCap)}</div>
+              </div>
+              <div style={{ gridColumn: '4 / span 3' }} className="text-center">
+                <div className="text-lg font-bold">Q2 Total: {totals.Next} days</div>
+                <div className="text-sm text-slate-600">Available: {netCap} days • Used: {totals.Next} days</div>
+                <div className={`text-base font-semibold ${statusClass(totals.Next, netCap)}`}>{statusText(totals.Next, netCap)}</div>
+              </div>
+              <div style={{ gridColumn: '7 / span 3' }} className="text-center">
+                <div className="text-lg font-bold">Q3 Total: {totals.Future} days</div>
+                <div className="text-sm text-slate-600">Available: {netCap} days • Used: {totals.Future} days</div>
+                <div className={`text-base font-semibold ${statusClass(totals.Future, netCap)}`}>{statusText(totals.Future, netCap)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* FTE band across all months */}
+        <div className="mt-8">
+          <div className="flex items-start gap-4">
+            <div className="w-32 shrink-0" />
+            <div className="relative grid grid-cols-12 gap-x-1" style={{ width: GRID_WIDTH, minWidth: GRID_WIDTH }}>
+              {/* Vertical quarter separators */}
+              <div className="absolute left-[25%] top-0 bottom-0 w-px bg-black/60" />
+              <div className="absolute left-[50%] top-0 bottom-0 w-px bg-black/60" />
+              <div className="absolute left-[75%] top-0 bottom-0 w-px bg-black/60" />
+
+              {FTE_LINES.map((f, i) => (
+                <div key={i} style={{ gridColumn: "1 / span 12" }} className="min-w-0 px-1 py-1">
+                  <div className={`rounded-2xl ${FTE_COLORS[i % FTE_COLORS.length]} text-white text-base font-medium px-5 py-2 shadow-sm`}>
+                    <div className="truncate">{f.name}</div>
+                    <div className="text-sm opacity-90">{f.ftes}× FTE · {(f.ftes * DAYS_PER_QUARTER).toFixed(2)}d/qtr ({DAYS_PER_YEAR}d/yr each)</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Overages summary per quarter under FTE band (red/green) */}
+          <div className="mt-3 flex items-start gap-4">
+            <div className="w-32 shrink-0" />
+            <div className="relative grid grid-cols-12 gap-x-1" style={{ width: GRID_WIDTH, minWidth: GRID_WIDTH }}>
+              <div style={{ gridColumn: '1 / span 3' }} className="text-center text-sm font-semibold">
+                <span className={`${statusClass(totals.Now, netCap)}`}>{statusText(totals.Now, netCap)}</span>
+              </div>
+              <div style={{ gridColumn: '4 / span 3' }} className="text-center text-sm font-semibold">
+                <span className={`${statusClass(totals.Next, netCap)}`}>{statusText(totals.Next, netCap)}</span>
+              </div>
+              <div style={{ gridColumn: '7 / span 3' }} className="text-center text-sm font-semibold">
+                <span className={`${statusClass(totals.Future, netCap)}`}>{statusText(totals.Future, netCap)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Legend: investment case marks (white glyphs) */}
+      <div className="mt-6 px-1">
+        <div className="text-sm font-semibold text-slate-700 mb-2">Legend</div>
+        <div className="flex flex-wrap gap-4 text-sm text-slate-700">
+          {Object.entries(CASE_MARK).map(([label, mark]) => (
+            <div key={label} className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-slate-900 text-white text-sm">
+                {mark}
+              </span>
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-3 text-[11px] text-slate-400">
+        Bars auto-sequence left→right within each 3‑month band. Capacity basis: 300d/yr (75d/qtr). FTE basis: 240d/yr ⇒ 0.25 FTE = 15d/qtr. Net available per quarter = 60d.
+      </div>
+    </div>
+  );
+}
