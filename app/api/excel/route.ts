@@ -50,3 +50,46 @@ export async function GET(request: Request) {
 
   return Response.json(filteredData);
 }
+
+export async function POST(request: Request) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file") as File;
+
+    if (!file) {
+      return Response.json(
+        { error: "No file provided" },
+        { status: 400 }
+      );
+    }
+
+    if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
+      return Response.json(
+        { error: "File must be an Excel file (.xlsx or .xls)" },
+        { status: 400 }
+      );
+    }
+
+    // Read the file buffer
+    const buffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(buffer);
+
+    // Ensure data directory exists
+    const dataDir = path.join(process.cwd(), "data");
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    // Save the file
+    const filePath = path.join(dataDir, "LiveData.xlsx");
+    fs.writeFileSync(filePath, uint8Array);
+
+    return Response.json({ success: true, message: "File uploaded successfully" });
+  } catch (error) {
+    console.error("Upload error:", error);
+    return Response.json(
+      { error: "Failed to upload file" },
+      { status: 500 }
+    );
+  }
+}

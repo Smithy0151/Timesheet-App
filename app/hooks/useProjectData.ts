@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ProjectRecord, GroupedProjects } from "@/app/types/project";
 import { groupProjectsByQuarterAndMonth } from "@/app/utils/projectGrouping";
 
@@ -8,6 +8,7 @@ interface UseProjectDataResult {
   data: GroupedProjects | null;
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
 export function useProjectData(
@@ -18,7 +19,7 @@ export function useProjectData(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     setLoading(true);
     setError(null);
 
@@ -40,5 +41,9 @@ export function useProjectData(
       });
   }, [year, department]);
 
-  return { data, loading, error };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
 }
