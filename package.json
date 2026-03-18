@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build:data": "node scripts/build-data.js",
+    "build": "npm run build:data && next build",
     "start": "next start",
     "lint": "eslint"
   },

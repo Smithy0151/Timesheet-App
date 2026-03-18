@@ -9,15 +9,19 @@ export async function GET(request: Request) {
   const year = searchParams.get("year");
   const month = searchParams.get("month");
 
-  const filePath = path.join(process.cwd(), "data", "LiveData.xlsx");
+  // Read pre-built JSON from public directory instead of reading Excel at runtime
+  const filePath = path.join(process.cwd(), "public", "livedata.json");
+  
+  if (!fs.existsSync(filePath)) {
+    console.error("Data file not found at", filePath);
+    return Response.json(
+      { error: "Data not available. Please rebuild the application." },
+      { status: 500 }
+    );
+  }
 
-  const buffer = fs.readFileSync(filePath);
-  const workbook = XLSX.read(buffer);
-
-  console.log("Available sheets:", workbook.SheetNames);
-
-  const sheet = workbook.Sheets[workbook.SheetNames[1]];
-  const data = XLSX.utils.sheet_to_json(sheet);
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  const data = JSON.parse(fileContent);
 
   console.log("Total rows:", data.length);
   console.log("Filtering with - department:", department, "year:", year);
