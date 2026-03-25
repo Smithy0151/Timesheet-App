@@ -75,7 +75,7 @@ export function groupProjectsByQuarterAndMonth(
 
     // Aggregate hours and days
     monthlyProjects[month][key].hours += project["Time Spent in Hours"];
-    monthlyProjects[month][key].days += project["Time Spent in Days"];
+    monthlyProjects[month][key].days += project["Time spent in days"];
   });
 
   // Populate the grouped structure
