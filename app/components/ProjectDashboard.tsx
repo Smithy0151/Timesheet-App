@@ -2,9 +2,11 @@
 
 import { useState, useRef } from "react";
 import { useProjectData } from "@/app/hooks/useProjectData";
+import { AggregatedProject } from "@/app/types/project";
 import YearSelector from "./YearSelector";
 import DepartmentSelector from "./DepartmentSelector";
 import QuarterSection from "./QuarterSection";
+import ProjectModal from "./ProjectModal";
 
 export default function ProjectDashboard() {
   const currentYear = new Date().getFullYear();
@@ -12,6 +14,8 @@ export default function ProjectDashboard() {
   const [selectedDepartment, setSelectedDepartment] = useState("Concerto");
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [selectedProject, setSelectedProject] = useState<AggregatedProject | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data, loading, error, refetch } = useProjectData(selectedYear, selectedDepartment);
@@ -60,6 +64,16 @@ export default function ProjectDashboard() {
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleProjectClick = (project: AggregatedProject) => {
+    setSelectedProject(project);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedProject(null);
   };
 
   return (
@@ -145,7 +159,12 @@ export default function ProjectDashboard() {
         {data && !loading && (
           <div className="flex flex-col gap-6 p-6">
             {Object.entries(data).map(([quarter, months]) => (
-              <QuarterSection key={quarter} quarter={quarter} months={months} />
+              <QuarterSection
+                key={quarter}
+                quarter={quarter}
+                months={months}
+                onProjectClick={handleProjectClick}
+              />
             ))}
           </div>
         )}
@@ -163,6 +182,12 @@ export default function ProjectDashboard() {
             </div>
           )}
       </div>
+
+      <ProjectModal
+        project={selectedProject}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 }

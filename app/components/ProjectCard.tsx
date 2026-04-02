@@ -4,11 +4,15 @@ import { AggregatedProject } from "@/app/types/project";
 
 interface ProjectCardProps {
   project: AggregatedProject;
+  onClick: (project: AggregatedProject) => void;
 }
 
-export default function ProjectCard({ project }: ProjectCardProps) {
+export default function ProjectCard({ project, onClick }: ProjectCardProps) {
   return (
-    <div className="border-l-4 border-l-blue-500 bg-white rounded-lg p-3 mb-2 shadow-sm hover:shadow-lg hover:border-l-blue-600 transition-all">
+    <button
+      onClick={() => onClick(project)}
+      className="w-full border-l-4 border-l-blue-500 bg-white rounded-lg p-3 mb-2 shadow-sm hover:shadow-lg hover:border-l-blue-600 hover:bg-indigo-50 transition-all cursor-pointer text-left"
+    >
       <h3 className="font-semibold text-gray-800 text-xs mb-1 truncate">
         {project.title}
       </h3>
@@ -28,6 +32,6 @@ export default function ProjectCard({ project }: ProjectCardProps) {
         </span>
       </div>
       <p className="text-xs text-gray-400 truncate">ID: {project.reference}</p>
-    </div>
+    </button>
   );
 }

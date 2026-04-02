@@ -54,6 +54,11 @@ export interface AggregatedProject {
   overhead: boolean;
   category: string;
   projectManager: string;
+  budgetCategory?: string;
+  supportTickets: string[];
+  sprintItems: string[];
+  adHocNotes: string[];
+  nonProjectCategory?: string;
 }
 
 export interface MonthData {

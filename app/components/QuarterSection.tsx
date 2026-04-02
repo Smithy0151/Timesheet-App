@@ -1,16 +1,18 @@
 "use client";
 
-import { MonthData } from "@/app/types/project";
+import { MonthData, AggregatedProject } from "@/app/types/project";
 import MonthColumn from "./MonthColumn";
 
 interface QuarterSectionProps {
   quarter: string;
   months: MonthData;
+  onProjectClick: (project: AggregatedProject) => void;
 }
 
 export default function QuarterSection({
   quarter,
   months,
+  onProjectClick,
 }: QuarterSectionProps) {
   const monthNames = Object.keys(months);
 
@@ -25,6 +27,7 @@ export default function QuarterSection({
             key={month}
             month={month}
             projects={months[month]}
+            onProjectClick={onProjectClick}
           />
         ))}
       </div>

@@ -6,9 +6,10 @@ import ProjectCard from "./ProjectCard";
 interface MonthColumnProps {
   month: string;
   projects: AggregatedProject[];
+  onProjectClick: (project: AggregatedProject) => void;
 }
 
-export default function MonthColumn({ month, projects }: MonthColumnProps) {
+export default function MonthColumn({ month, projects, onProjectClick }: MonthColumnProps) {
   return (
     <div className="flex flex-col flex-1 bg-white rounded-lg overflow-hidden shadow-md">
       <div className="bg-gradient-to-r from-gray-800 to-gray-700 text-white p-3 sticky top-0 z-10">
@@ -23,6 +24,7 @@ export default function MonthColumn({ month, projects }: MonthColumnProps) {
             <ProjectCard
               key={`${project.reference}-${project.title}-${idx}`}
               project={project}
+              onClick={onProjectClick}
             />
           ))
         ) : (

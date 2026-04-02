@@ -70,12 +70,41 @@ export function groupProjectsByQuarterAndMonth(
         overhead: project.Overhead === "Yes",
         category: project["Category of Time"],
         projectManager: project["Project Manager"],
+        budgetCategory: project["Budget Category"] || undefined,
+        supportTickets: [],
+        sprintItems: [],
+        adHocNotes: [],
+        nonProjectCategory: project["Non-Project Timesheet sub category"] || undefined,
       };
     }
 
     // Aggregate hours and days
     monthlyProjects[month][key].hours += project["Time Spent in Hours"];
     monthlyProjects[month][key].days += project["Time spent in days"];
+
+    // Collect unique support tickets
+    if (project["Support ticket reference"] && project["Support ticket reference"].trim()) {
+      const tickets = monthlyProjects[month][key].supportTickets;
+      if (!tickets.includes(project["Support ticket reference"])) {
+        tickets.push(project["Support ticket reference"]);
+      }
+    }
+
+    // Collect unique sprint items
+    if (project["Sprint Item name"] && project["Sprint Item name"].trim()) {
+      const sprints = monthlyProjects[month][key].sprintItems;
+      if (!sprints.includes(project["Sprint Item name"])) {
+        sprints.push(project["Sprint Item name"]);
+      }
+    }
+
+    // Collect unique ad-hoc notes
+    if (project["Ad-hoc notes"] && project["Ad-hoc notes"].trim()) {
+      const notes = monthlyProjects[month][key].adHocNotes;
+      if (!notes.includes(project["Ad-hoc notes"])) {
+        notes.push(project["Ad-hoc notes"]);
+      }
+    }
   });
 
   // Populate the grouped structure
