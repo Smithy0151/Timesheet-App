@@ -70,6 +70,9 @@ export function groupProjectsByQuarterAndMonth(
         overhead: project.Overhead === "Yes",
         category: project["Category of Time"],
         projectManager: project["Project Manager"],
+        department: project.Department,
+        assignees: [],
+        weekCommencingDates: [],
         budgetCategory: project["Budget Category"] || undefined,
         supportTickets: [],
         sprintItems: [],
@@ -81,6 +84,22 @@ export function groupProjectsByQuarterAndMonth(
     // Aggregate hours and days
     monthlyProjects[month][key].hours += project["Time Spent in Hours"];
     monthlyProjects[month][key].days += project["Time spent in days"];
+
+    // Collect unique assignees
+    if (project["Timesheet of User"] && project["Timesheet of User"].trim()) {
+      const assignees = monthlyProjects[month][key].assignees;
+      if (!assignees.includes(project["Timesheet of User"])) {
+        assignees.push(project["Timesheet of User"]);
+      }
+    }
+
+    // Collect unique week commencing dates
+    if (project["Timesheet W/C"] && project["Timesheet W/C"] > 0) {
+      const dates = monthlyProjects[month][key].weekCommencingDates;
+      if (!dates.includes(project["Timesheet W/C"])) {
+        dates.push(project["Timesheet W/C"]);
+      }
+    }
 
     // Collect unique support tickets
     if (project["Support ticket reference"] && project["Support ticket reference"].trim()) {

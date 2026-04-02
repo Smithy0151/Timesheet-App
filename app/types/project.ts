@@ -54,6 +54,9 @@ export interface AggregatedProject {
   overhead: boolean;
   category: string;
   projectManager: string;
+  department: string;
+  assignees: string[];
+  weekCommencingDates: number[];
   budgetCategory?: string;
   supportTickets: string[];
   sprintItems: string[];
